@@ -2,6 +2,7 @@
 
 import superagent from 'superagent';
 import express from 'express';
+import fs from 'fs';
 const authRouter = express.Router();
 
 import User from './model.js';
@@ -13,11 +14,11 @@ import auth from './middleware.js';
 authRouter.post('/signup', (req, res, next) => {
   let user = new User(req.body);
   user.save()
-    .then( user => res.send(user.generateToken()) )
+    .then(user => res.send(user.generateToken()))
     .catch(next);
 });
 
-authRouter.get('/signin',auth, (req, res, next) => {
+authRouter.get('/signin', auth, (req, res, next) => {
   res.cookie('Token', req.token);
   res.send(req.token);
 });
@@ -47,17 +48,17 @@ authRouter.get('/oauth/fb/code', (req, res, next) => {
     //   redirect_uri: `${process.env.API_URL}/oauth/fb/code`,
     //   grant_type: 'authorization_code',
     // })
-    .then( response => {
+    .then(response => {
       //console.log(response.body);
       let FBToken = response.body.access_token;
       console.log('(2) FB token', FBToken);
       return FBToken;
     })
-  // use the token to get a user
-    .then ( token => {
+    // use the token to get a user
+    .then(token => {
       return superagent.get('https://graph.facebook.com/me')
         .set('Authorization', `Bearer ${token}`)
-        .then (response => {
+        .then(response => {
           console.log(response);
           let user = response.text;
           console.log('(3) FB User', user);
@@ -68,16 +69,16 @@ authRouter.get('/oauth/fb/code', (req, res, next) => {
       console.log('(4) FB User', FBUser);
       return User.createFromOAuth(FBUser);
     })
-    .then ( user => {
+    .then(user => {
       console.log('(5) user', user);
       return user.generateToken();
     })
-    .then ( token => {
+    .then(token => {
       console.log('(6) token', token);
       res.cookie('Token', token);
       res.redirect(URL);
     })
-    .catch( error => {
+    .catch(error => {
       console.log('ERROR', error.message);
       next(error);
       // res.redirect(URL);
@@ -85,8 +86,19 @@ authRouter.get('/oauth/fb/code', (req, res, next) => {
 
 });
 
-authRouter.get('/showMeTheMoney', auth, (req,res,next) => {
-  res.send('Here is all the ca$h');
+authRouter.get('/showMeTheMoney', auth, (req, res, next) => {
+  fs.readFile('./src/auth/assets/text.txt', (err, data) => {
+    res.setHeader('Content-Type', 'text/html');
+    res.statusCode = 200;
+    res.statusMessage = 'OK';
+
+    if (err) throw err;
+
+    res.write(data);
+
+    res.end();
+    //res.send(``);
+  });
 });
 
 export default authRouter;
